@@ -2,10 +2,10 @@ import os
 from dotenv import load_dotenv
 from google import genai
 
-# 1. โหลดค่า GEMINI_API_KEY จากไฟล์ .env
+### 1. โหลดค่า GEMINI_API_KEY จากไฟล์ .env
 load_dotenv()
 
-# 2. ตรวจสอบและสร้าง Client
+### 2. ตรวจสอบและสร้าง Client
 if not os.getenv("GEMINI_API_KEY"):
     print("❌ Error: ไม่พบ GEMINI_API_KEY กรุณาตรวจสอบไฟล์ .env")
 else:
