@@ -1,9 +1,15 @@
 import os
 import sys
+from dotenv import load_dotenv
 from PIL import Image
 from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
+
+# ---------------------------------------------------------
+# Load Gemini API
+# ---------------------------------------------------------
+load_dotenv()
 
 # ---------------------------------------------------------
 # Configuration & Constants
@@ -14,7 +20,7 @@ SYSTEM_INSTRUCTION = """
 คุณสามารถช่วยบันทึกรายจ่าย คำนวณงบประมาณ และแนะนำร้านอาหารที่คุ้มค่าและเปิดบริการอยู่จริงได้
 """
 
-MODEL_NAME = 'gemini-2.5-flash'
+MODEL_NAME = 'gemini-3.5-flash'
 
 
 # Pydantic Schema for Expense Recording
