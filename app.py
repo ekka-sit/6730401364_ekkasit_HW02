@@ -5,6 +5,7 @@ from PIL import Image
 from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
+from google.genai import errors  # เพิ่มการ import errors เพื่อดักจับ API errors
 
 # ---------------------------------------------------------
 # Load Gemini API
@@ -20,6 +21,7 @@ SYSTEM_INSTRUCTION = """
 คุณสามารถช่วยบันทึกรายจ่าย คำนวณงบประมาณ และแนะนำร้านอาหารที่คุ้มค่าและเปิดบริการอยู่จริงได้
 """
 
+# ใช้โมเดลมาตรฐานที่เสถียรที่สุดของ Gemini SDK
 MODEL_NAME = 'gemini-3.5-flash'
 
 
@@ -52,12 +54,19 @@ def record_expense_text(client: genai.Client, text_prompt: str) -> str:
         response_mime_type="application/json",
         response_schema=ExpenseRecord,
     )
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=text_prompt,
-        config=json_config
-    )
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=text_prompt,
+            config=json_config
+        )
+        return response.text
+    except errors.APIError as e:
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            return "⚠️ เกิดข้อผิดพลาด: ใช้งานเกินโควตา API (Rate Limit 429) กรุณารอประมาณ 1-2 นาที แล้วลองใหม่อีกครั้งครับ"
+        return f"⚠️ เกิดข้อผิดพลาดจาก Gemini API: {e}"
+    except Exception as e:
+        return f"⚠️ เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ: {e}"
 
 
 def record_expense_image(client: genai.Client, image_path: str) -> str:
@@ -73,12 +82,19 @@ def record_expense_image(client: genai.Client, image_path: str) -> str:
     except Exception as e:
         return f"Error loading image '{image_path}': {e}"
 
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=[receipt_image, "วิเคราะห์ยอดเงินและรายการจากใบเสร็จนี้เพื่อบันทึกรายจ่าย"],
-        config=json_config
-    )
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=[receipt_image, "วิเคราะห์ยอดเงินและรายการจากใบเสร็จนี้เพื่อบันทึกรายจ่าย"],
+            config=json_config
+        )
+        return response.text
+    except errors.APIError as e:
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            return "⚠️ เกิดข้อผิดพลาด: ใช้งานเกินโควตา API (Rate Limit 429) กรุณารอประมาณ 1-2 นาที แล้วลองใหม่อีกครั้งครับ"
+        return f"⚠️ เกิดข้อผิดพลาดจาก Gemini API: {e}"
+    except Exception as e:
+        return f"⚠️ เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ: {e}"
 
 
 def recommend_dining(client: genai.Client, location: str, budget: float) -> str:
@@ -93,12 +109,19 @@ def recommend_dining(client: genai.Client, location: str, budget: float) -> str:
 - งบประมาณ: ไม่เกิน {budget} บาทต่อมื้อ
 - ความต้องการ: ขอร้านที่เปิดให้บริการอยู่จริงในปัจจุบัน มีชื่อร้าน ราคาโดยประมาณ และเหตุผลประกอบ
 """
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=prompt,
-        config=search_config
-    )
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=search_config
+        )
+        return response.text
+    except errors.APIError as e:
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            return "⚠️ เกิดข้อผิดพลาด: การค้นหาร้านอาหารติดขีดจำกัดโควตาฟรี (Search Grounding Rate Limit 429) กรุณารอประมาณ 1-2 นาที แล้วลองใหม่อีกครั้งครับ"
+        return f"⚠️ เกิดข้อผิดพลาดจาก Gemini API: {e}"
+    except Exception as e:
+        return f"⚠️ เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ: {e}"
 
 
 def calculate_budget_summary(client: genai.Client, monthly_budget: float, expenses: list[float]) -> str:
@@ -119,24 +142,36 @@ def calculate_budget_summary(client: genai.Client, monthly_budget: float, expens
 2. จำนวนเงินงบประมาณคงเหลือ
 3. งบประมาณที่ใช้ได้ต่อวันสำหรับวันคงเหลือในเดือนนี้
 """
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=prompt,
-        config=code_exec_config
-    )
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=code_exec_config
+        )
+        return response.text
+    except errors.APIError as e:
+        if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+            return "⚠️ เกิดข้อผิดพลาด: ใช้งานเกินโควตา API (Rate Limit 429) กรุณารอประมาณ 1-2 นาที แล้วลองใหม่อีกครั้งครับ"
+        return f"⚠️ เกิดข้อผิดพลาดจาก Gemini API: {e}"
+    except Exception as e:
+        return f"⚠️ เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ: {e}"
 
 
 def start_chat_session(client: genai.Client):
     """Feature 4: Multi-turn Chat Session."""
-    chat = client.chats.create(
-        model=MODEL_NAME,
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
-            temperature=0.2,
-            tools=[types.Tool(google_search=types.GoogleSearch())]
+    try:
+        chat = client.chats.create(
+            model=MODEL_NAME,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
+                temperature=0.2,
+                tools=[types.Tool(google_search=types.GoogleSearch())]
+            )
         )
-    )
+    except Exception as e:
+        print(f"\n⚠️ ไม่สามารถเริ่มต้นระบบแชทได้: {e}")
+        return
+
     print("\n--- เริ่มต้นระบบแชทผู้ช่วยการเงินและแนะนำอาหาร (พิมพ์ 'exit' เพื่อจบการทำงาน) ---")
     while True:
         try:
@@ -146,15 +181,21 @@ def start_chat_session(client: genai.Client):
                 break
             response = chat.send_message(user_input)
             print(f"\nAI:\n{response.text}")
+        except errors.APIError as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                print("\n⚠️ ระบบติด Rate Limit (429): กรุณารอประมาณ 1-2 นาที แล้วลองพิมพ์คำถามอีกครั้ง หรือพิมพ์ 'exit' เพื่อออก")
+            else:
+                print(f"\n⚠️ เกิดข้อผิดพลาดจาก Gemini API: {e}")
         except KeyboardInterrupt:
             print("\nจบการสนทนา")
             break
+        except Exception as e:
+            print(f"\n⚠️ เกิดข้อผิดพลาด: {e}")
 
 
-def main():
-    client = get_client()
-
-    print("==================================================")
+def print_menu():
+    """พิมพ์รายการเมนูฟังก์ชั่นการใช้งาน."""
+    print("\n==================================================")
     print(" Smart Personal Finance & Dining Assistant App")
     print("==================================================")
     print("1. บันทึกรายจ่ายจากข้อความ (Structured Output JSON)")
@@ -165,7 +206,14 @@ def main():
     print("6. ออกจากโปรแกรม")
     print("==================================================")
 
+
+def main():
+    client = get_client()
+
     while True:
+        # แสดงรายการฟังก์ชั่นใหม่ทุกครั้งในแต่ละรอบ
+        print_menu()
+        
         choice = input("\nกรุณาเลือกฟังก์ชั่น (1-6): ").strip()
         
         if choice == '1':
@@ -192,7 +240,7 @@ def main():
             print(res)
 
         elif choice == '4':
-            m_budget_input = input("ระบุงบประมาณรายเดือน (กด Enter เพื่อใชัค่าเริ่มต้น 15000): ").strip()
+            m_budget_input = input("ระบุงบประมาณรายเดือน (กด Enter เพื่อใช้ค่าเริ่มต้น 15000): ").strip()
             m_budget = float(m_budget_input) if m_budget_input else 15000.0
             
             e_str = input("ระบุรายจ่ายที่ใช้ไปแล้ว แบ่งด้วยเครื่องหมาย comma (กด Enter เพื่อใช้ค่าเริ่มต้น 3450, 2800, 4120): ").strip()
